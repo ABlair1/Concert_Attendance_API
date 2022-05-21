@@ -1,0 +1,35 @@
+{% extends 'index.html' %}
+{% block content %}
+<div class="container mx-auto">
+    <h3 class="text-center">Welcome!</h3>
+    <p class="text-center">
+        Hello, {{  f_name  }}. Please find your user info below. 
+        The JSON Web Token (JWT) associated with your account must be 
+        incuded as an authorization header in any requests for 
+        protected resources (see documentation to determine which 
+        resources are protected and how to include the JWT). 
+    </p>
+    <table class="table">
+        <tr>
+            <th scope="col">Category</th>
+            <th scope="col">Your Info</th>
+        </tr>
+        <tr>
+            <th scope="row">First Name:</th>
+            <td>{{  f_name  }}</td>
+        </tr>
+        <tr>
+            <th scope="row">Last Name:</th>
+            <td>{{  l_name  }}</td>
+        </tr>
+        <tr>
+            <th scope="row">ID:</th>
+            <td>{{  user_id  }}</td>
+        </tr>
+        <tr>
+            <th scope="row">JWT:</th>
+            <td>{{  jwt_token  }}</td>
+        </tr>
+    </table>
+</div>
+{% endblock %}
