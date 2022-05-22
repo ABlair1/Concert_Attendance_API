@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for
+from google.auth import jwt
 from google.cloud import datastore
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
@@ -7,19 +8,19 @@ import concerts
 import constants
 import random
 import string
-
-from google.auth import jwt  #################################################
+import users
 
 
 app = Flask(__name__)
 ds_client = datastore.Client()
 # app.register_blueprint(bands.bp)
 # app.register_blueprint(concerts.bp)
+# app.register_blueprint(users.bp)
 
 
 def store_state(state):
     new_state = datastore.entity.Entity(key=ds_client.key(constants.state))
-    new_state.update({"value": state})
+    new_state.update({'value': state})
     ds_client.put(new_state)
 
 
@@ -33,18 +34,12 @@ def validate_state(state):
     query = ds_client.query(kind=constants.state)
     state_list = list(query.fetch())
     for s in state_list:
-        if s["value"] == state:
+        if s['value'] == state:
             return True
     return False
 
 
-@app.route('/')
-def home():
-    if 'code' not in request.args:  # user not authenticated
-        return render_template('welcome.html')
-    state = request.args.get('state')
-    if not validate_state(state):
-        return ('Error: Invalid state credential', 401)
+def get_jwt_token(state):
     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
         'client_secret.json',
         scopes=['https://www.googleapis.com/auth/userinfo.profile'],
@@ -54,11 +49,53 @@ def home():
     authorization_response = request.url
     flow.fetch_token(authorization_response=authorization_response)
     jwt_token = flow.credentials.id_token
+    return jwt_token
+
+
+def get_user_info(jwt_token):
     decoded_jwt = jwt.decode(jwt_token, verify=False)
+    user_info = {
+        'f_name': decoded_jwt['given_name'],
+        'l_name': decoded_jwt['family_name'],
+        'auth_id': decoded_jwt['sub']
+    }
+    return user_info
+
+
+def update_user(user, user_info):
+        user.update({
+        'f_name': user_info['f_name'], 
+        'l_name': user_info['l_name'], 
+        'auth_id': user_info['auth_id'],
+        'concerts': []
+    })
+
+
+def store_user(user_info):
+    query = ds_client.query(kind=constants.user)
+    user_list = list(query.fetch())
+    for user in user_list:
+        if user['auth_id'] == user_info['auth_id']:
+            return
+    new_user = datastore.entity.Entity(key=ds_client.key(constants.user))
+    update_user(new_user, user_info)
+    ds_client.put(new_user)
+
+
+@app.route('/')
+def home():
+    if 'code' not in request.args:  # user not authenticated
+        return render_template('welcome.html')
+    state = request.args.get('state')
+    if not validate_state(state):
+        return ('Error: Invalid state credential', 401)
+    jwt_token = get_jwt_token(state)
+    user_info = get_user_info(jwt_token)
+    store_user(user_info)  # user entity created if not already in datastore
     return render_template('user_info.html',
-        f_name=decoded_jwt['given_name'],
-        l_name=decoded_jwt['family_name'],
-        auth_id=decoded_jwt['sub'],
+        f_name=user_info['f_name'],
+        l_name=user_info['l_name'],
+        auth_id=user_info['auth_id'],
         jwt_token=jwt_token
     )
 
