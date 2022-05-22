@@ -8,6 +8,8 @@ import constants
 import random
 import string
 
+from google.auth import jwt  #################################################
+
 
 app = Flask(__name__)
 ds_client = datastore.Client()
@@ -52,10 +54,11 @@ def home():
     authorization_response = request.url
     flow.fetch_token(authorization_response=authorization_response)
     jwt_token = flow.credentials.id_token
+    decoded_jwt = jwt.decode(jwt_token, verify=False)
     return render_template('user_info.html',
-        # f_name=f_name,
-        # l_name=l_name,
-        # user_id=user_id,
+        f_name=decoded_jwt['given_name'],
+        l_name=decoded_jwt['family_name'],
+        auth_id=decoded_jwt['sub'],
         jwt_token=jwt_token
     )
 
