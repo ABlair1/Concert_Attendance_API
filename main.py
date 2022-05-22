@@ -15,7 +15,7 @@ app = Flask(__name__)
 ds_client = datastore.Client()
 # app.register_blueprint(bands.bp)
 # app.register_blueprint(concerts.bp)
-# app.register_blueprint(users.bp)
+app.register_blueprint(users.bp)
 
 
 def store_state(state):
