@@ -15,7 +15,23 @@ def invalid_method_response(allowed_methods):
     return res
 
 
-def get_all_users():
+def validate_accept_header_json(req_headers):
+    accept_err = {"Error": "Requests must accept response Content-type of application/json"}
+    accept_headers = req_headers.get("Accept").split(",")
+    for header in accept_headers:
+        header = header.strip()
+    if "application/json" not in accept_headers and "*/*" not in accept_headers:
+        res = make_response(json.dumps(accept_err))
+        res.headers.set("Content-type", "application/json")
+        res.status_code = 406
+        return res
+    return None
+
+
+def get_all_users(req):
+    accept_error = validate_accept_header_json(req.headers)
+    if accept_error is not None:
+        return accept_error
     query = ds_client.query(kind=constants.user)
     user_list = list(query.fetch())
     res = make_response(json.dumps(user_list))
@@ -27,7 +43,7 @@ def get_all_users():
 @bp.route('', methods=['GET'])
 def get_users():
     if request.method == 'GET':
-        return get_all_users()
+        return get_all_users(request)
     else:
         allowed_methods = 'GET'
         return invalid_method_response(allowed_methods)
