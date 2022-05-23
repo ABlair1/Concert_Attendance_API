@@ -25,6 +25,7 @@ def validate_content_header_json(req_headers):
         return res
     return None
 
+
 def validate_accept_header_json(req_headers):
     accept_err = {"Error": "Requests must accept response Content-type of application/json"}
     accept_headers = req_headers.get("Accept").split(",")
@@ -47,8 +48,9 @@ def validate_band_id(band):
         return res
     return None
 
+
 def validate_band_attribute_keys(req_body):
-    allowed = ["name", "type", "length"]
+    allowed = ["name", "genre", "members"]
     err = {"Error": "The request object includes additional attributes which are not permitted"}
     if len(req_body) > len(allowed):
         res = make_response(json.dumps(err))
@@ -64,9 +66,10 @@ def validate_band_attribute_keys(req_body):
             return res
     return None
 
+
 def validate_band_attributes(req_body):
     attr_err = {"Error": "The request object is missing at least one of the required attributes"}
-    if "name" not in req_body or "type" not in req_body or "length" not in req_body:
+    if "name" not in req_body or "genre" not in req_body or "members" not in req_body:
         res = make_response(json.dumps(attr_err))
         res.headers.set("Content-type", "application/json")
         res.status_code = 400
@@ -77,30 +80,46 @@ def validate_band_attributes(req_body):
     return None
 
 
-def update_band(band, req_body):
+def update_new_band(band, req_body):
     updates = {}
-    if "name" in req_body:
-        updates["name"] = req_body["name"]
-    if "type" in req_body:
-        updates["type"] = req_body["type"]
-    if "length" in req_body:
-        updates["length"] = req_body["length"]
+    updates["name"] = req_body["name"]
+    updates["genre"] = req_body["genre"]
+    updates["members"] = req_body["members"]
+    updates["concerts"] = []
     band.update(updates)
 
 
+def update_band_details(band, req_body):
+    updates = {}
+    if "name" in req_body:
+        updates["name"] = req_body["name"]
+    if "genre" in req_body:
+        updates["genre"] = req_body["genre"]
+    if "members" in req_body:
+        updates["members"] = req_body["members"]
+    band.update(updates)
+
+
+def update_band_concerts():
+    pass
+
+
 def create_band(req):
+    # Validate request headers
     content_error = validate_content_header_json(req.headers)
     if content_error is not None:
         return content_error
     accept_error = validate_accept_header_json(req.headers)
     if accept_error is not None:
         return accept_error
+    # Validate request body
     req_body = req.get_json()
     attr_err = validate_band_attributes(req_body)
     if attr_err is not None:
         return attr_err
+    # Create band in datastore and send response with result
     new_band = datastore.entity.Entity(key=ds_client.key(constants.band))
-    update_band(new_band, req_body)
+    update_new_band(new_band, req_body)
     ds_client.put(new_band)
     new_band["id"] = new_band.key.id
     new_band["self"] = req.base_url + "/" + str(new_band.key.id)
@@ -129,7 +148,7 @@ def delete_band_with_id():
 @bp.route('', methods=['POST', 'GET'])
 def post_get_bands():
     if request.method == 'POST':
-        return create_band()
+        return create_band(request)
     elif request.method == 'GET':
         return get_all_bands()
     else:
