@@ -129,8 +129,20 @@ def create_band(req):
     return res
 
 
-def get_all_bands():
-    pass
+def get_all_bands(req):
+    # Validate request headers
+    accept_error = validate_accept_header_json(req.headers)
+    if accept_error is not None:
+        return accept_error
+    # Retrieve and return list of all bands
+    query = ds_client.query(kind=constants.band)
+    band_list = list(query.fetch())
+    # Insert resource url for each concert
+    #################################################### TO DO ##################
+    res = make_response(json.dumps(band_list))
+    res.headers.set("Content-type", "application/json")
+    res.status_code = 200
+    return res
 
 
 def get_band_with_id():

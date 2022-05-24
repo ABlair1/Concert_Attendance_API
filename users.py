@@ -29,9 +29,11 @@ def validate_accept_header_json(req_headers):
 
 
 def get_all_users(req):
+    # Validate request headers
     accept_error = validate_accept_header_json(req.headers)
     if accept_error is not None:
         return accept_error
+    # Retrieve and return list of all users (omit concerts attribute)
     query = ds_client.query(kind=constants.user)
     user_list = list(query.fetch())
     res = make_response(json.dumps(user_list))
