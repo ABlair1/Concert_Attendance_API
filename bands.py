@@ -155,8 +155,16 @@ def get_all_bands(req):
     return res
 
 
-def get_band_with_id():
-    pass
+def get_band_with_id(band_id, req):
+    band = ds_client.get(key=ds_client.key(constants.band, int(band_id)))
+    id_error = validate_band_id(band)
+    if id_error is not None:
+        return id_error
+    band["id"] = band.key.id
+    band["self"] = req.base_url
+    for concert in band["concerts"]:
+        concert["self"] = req.base_url[:-22] + "concerts/" + str(concert["id"])
+    return (json.dumps(band), 200)
 
 
 def edit_band_with_id():
@@ -179,9 +187,9 @@ def post_get_bands():
 
 
 @bp.route('/<band_id>', methods=['GET', 'PATCH', 'DELETE'])
-def get_patch_delete_bands():
+def get_patch_delete_bands(band_id):
     if request.method == 'GET':
-        return get_band_with_id()
+        return get_band_with_id(band_id, request)
     elif request.method == 'PATCH':
         return edit_band_with_id()
     elif request.method == 'DELETE':
