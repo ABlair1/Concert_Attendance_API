@@ -6,6 +6,7 @@ import constants
 
 ds_client = datastore.Client()
 bp = Blueprint('bands', __name__, url_prefix='/bands')
+pg_limit = 5
 
 
 def invalid_method_response(allowed_methods):
@@ -136,9 +137,18 @@ def get_all_bands(req):
         return accept_error
     # Retrieve and return list of all bands
     query = ds_client.query(kind=constants.band)
-    band_list = list(query.fetch())
-    # Insert resource url for each concert
-    #################################################### TO DO ##################
+    q_limit = int(req.args.get("limit", str(pg_limit)))
+    q_offset = int(req.args.get("offset", "0"))
+    q_result = query.fetch(limit=q_limit, offset=q_offset)
+    band_list = {"bands": list(next(q_result.pages))}
+    for band in band_list["bands"]:
+        band["id"] = band.key.id
+        band["self"] = req.base_url + "/" + str(band.key.id)
+        for concert in band["concerts"]:
+            concert["self"] = req.base_url[:-5] + "concerts/" + str(concert["id"])
+    band_list["self"] = f"{req.base_url}?limit={q_limit}&offset={q_offset}"
+    if q_result.next_page_token:
+        band_list["next"] = f"{req.base_url}?limit={q_limit}&offset={q_limit+q_offset}"
     res = make_response(json.dumps(band_list))
     res.headers.set("Content-type", "application/json")
     res.status_code = 200
@@ -162,7 +172,7 @@ def post_get_bands():
     if request.method == 'POST':
         return create_band(request)
     elif request.method == 'GET':
-        return get_all_bands()
+        return get_all_bands(request)
     else:
         allowed_methods = 'POST, GET'
         return invalid_method_response(allowed_methods)
