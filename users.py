@@ -17,7 +17,8 @@ def invalid_method_response(allowed_methods):
 
 def validate_accept_header_json(req_headers):
     accept_err = {"Error": "Requests must accept response Content-type of application/json"}
-    accept_headers = req_headers.get("Accept").split(",")
+    accept_headers = req_headers.get("Accept").replace(";", ",")
+    accept_headers = accept_headers.split(",")
     for header in accept_headers:
         header = header.strip()
     if "application/json" not in accept_headers and "*/*" not in accept_headers:
@@ -36,6 +37,8 @@ def get_all_users(req):
     # Retrieve and return list of all users (omit concerts attribute)
     query = ds_client.query(kind=constants.user)
     user_list = list(query.fetch())
+    for user in user_list:
+        user.pop("concerts", None)
     res = make_response(json.dumps(user_list))
     res.headers.set("Content-type", "application/json")
     res.status_code = 200

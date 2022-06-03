@@ -18,7 +18,10 @@ def invalid_method_response(allowed_methods):
 
 def validate_content_header_json(req_headers):
     content_err = {"Error": "Request Content-type must be application/json"}
-    content_headers = req_headers.get("Content-type").split(", ")
+    content_headers = req_headers.get("Content-type").replace(";", ",")
+    content_headers = content_headers.split(",")
+    for header in content_headers:
+        header = header.strip()
     if "application/json" not in content_headers:
         res = make_response(json.dumps(content_err))
         res.headers.set("Content-type", "application/json")
@@ -29,7 +32,8 @@ def validate_content_header_json(req_headers):
 
 def validate_accept_header_json(req_headers):
     accept_err = {"Error": "Requests must accept response Content-type of application/json"}
-    accept_headers = req_headers.get("Accept").split(",")
+    accept_headers = req_headers.get("Accept").replace(";", ",")
+    accept_headers = accept_headers.split(",")
     for header in accept_headers:
         header = header.strip()
     if "application/json" not in accept_headers and "*/*" not in accept_headers:
@@ -164,14 +168,51 @@ def get_band_with_id(band_id, req):
     band["self"] = req.base_url
     for concert in band["concerts"]:
         concert["self"] = req.base_url[:-22] + "concerts/" + str(concert["id"])
-    return (json.dumps(band), 200)
+    res = make_response(json.dumps(band))
+    res.headers.set("Content-type", "application/json")
+    res.status_code = 200
+    return res
 
 
-def edit_band_with_id():
-    pass
+def edit_band_with_id(band_id, req):
+    # Validate request headers
+    content_error = validate_content_header_json(req.headers)
+    if content_error is not None:
+        return content_error
+    accept_error = validate_accept_header_json(req.headers)
+    if accept_error is not None:
+        return accept_error
+    # Validate band_id and request body
+    band = ds_client.get(key=ds_client.key(constants.band, int(band_id)))
+    id_error = validate_band_id(band)
+    if id_error is not None:
+        return id_error
+    req_body = req.get_json()
+    key_err = validate_band_attribute_keys(req_body)
+    if key_err is not None:
+        return key_err
+    # Update band entity and send response with result
+    update_band_details(band, req_body)
+    ds_client.put(band)
+    band["id"] = band.key.id
+    band["self"] = req.base_url
+    for concert in band["concerts"]:
+        concert["self"] = req.base_url[:-22] + "concerts/" + str(concert["id"])
+    res = make_response(json.dumps(band))
+    res.headers.set("Content-type", "application/json")
+    res.status_code = 200
+    return res
 
 
-def delete_band_with_id():
+def delete_band_with_id(band_id, req):
+    # # Validate band id
+    # band = ds_client.get(key=ds_client.key(constants.band, int(band_id)))
+    # id_error = validate_band_id(band)
+    # if id_error is not None:
+    #     return id_error
+    # # Remove associated concerts from users and delete concerts
+    # concert_list = 
+    # # Delete band entity
     pass
 
 
@@ -191,9 +232,9 @@ def get_patch_delete_bands(band_id):
     if request.method == 'GET':
         return get_band_with_id(band_id, request)
     elif request.method == 'PATCH':
-        return edit_band_with_id()
+        return edit_band_with_id(band_id, request)
     elif request.method == 'DELETE':
-        return delete_band_with_id()
+        return delete_band_with_id(band_id, request)
     else:
         allowed_methods = 'GET, PATCH, DELETE'
         return invalid_method_response(allowed_methods)
