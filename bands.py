@@ -105,10 +105,6 @@ def update_band_details(band, req_body):
     band.update(updates)
 
 
-def update_band_concerts():
-    pass
-
-
 def create_band(req):
     # Validate request headers
     content_error = validate_content_header_json(req.headers)
