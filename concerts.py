@@ -225,15 +225,30 @@ def get_all_concerts(req):
     return res
 
 
-def get_concert_with_id():
+def get_concert_with_id(concert_id, req):
+    # Validate request headers
+    accept_error = validate_accept_header_json(req.headers)
+    if accept_error is not None:
+        return accept_error
+    # Retrieve and return concert with concert_id
+    concert = ds_client.get(key=ds_client.key(constants.concert, int(concert_id)))
+    id_error = validate_concert_id(concert)
+    if id_error is not None:
+        return id_error
+    concert["id"] = concert.key.id
+    concert["self"] = req.base_url
+    concert["band"]["self"] = req.base_url[:-8] + "bands/" + str(concert["band"]["id"])
+    res = make_response(json.dumps(concert))
+    res.headers.set("Content-type", "application/json")
+    res.status_code = 200
+    return res
+
+
+def edit_concert_with_id(concert_id, req):
     pass
 
 
-def edit_concert_with_id():
-    pass
-
-
-def delete_concert_with_id():
+def delete_concert_with_id(concert_id, req):
     pass
 
 
@@ -249,13 +264,13 @@ def post_get_concerts():
 
 
 @bp.route('/<concert_id>', methods=['GET', 'PATCH', 'DELETE'])
-def get_patch_delete_concert():
+def get_patch_delete_concert(concert_id):
     if request.method == 'GET':
-        return get_concert_with_id()
+        return get_concert_with_id(concert_id, request)
     elif request.method == 'PATCH':
-        return edit_concert_with_id()
+        return edit_concert_with_id(concert_id, request)
     elif request.method == 'DELETE':
-        return delete_concert_with_id()
+        return delete_concert_with_id(concert_id, request)
     else:
         allowed_methods = 'GET, PATCH, DELETE'
         return invalid_method_response(allowed_methods)
