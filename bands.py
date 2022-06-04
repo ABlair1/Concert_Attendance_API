@@ -156,6 +156,11 @@ def get_all_bands(req):
 
 
 def get_band_with_id(band_id, req):
+    # Validate request headers
+    accept_error = validate_accept_header_json(req.headers)
+    if accept_error is not None:
+        return accept_error
+    # Retrieve and return band with band_id
     band = ds_client.get(key=ds_client.key(constants.band, int(band_id)))
     id_error = validate_band_id(band)
     if id_error is not None:
