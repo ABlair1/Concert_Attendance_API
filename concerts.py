@@ -202,7 +202,27 @@ def create_concert(req):
 
 
 def get_all_concerts(req):
-    pass
+    # Validate request headers
+    accept_error = validate_accept_header_json(req.headers)
+    if accept_error is not None:
+        return accept_error
+    # Retrieve and return list of all concerts
+    query = ds_client.query(kind=constants.concert)
+    q_limit = int(req.args.get("limit", str(pg_limit)))
+    q_offset = int(req.args.get("offset", "0"))
+    q_result = query.fetch(limit=q_limit, offset=q_offset)
+    concert_list = {"concerts": list(next(q_result.pages))}
+    for concert in concert_list["concerts"]:
+        concert["id"] = concert.key.id
+        concert["self"] = req.base_url + "/" + str(concert.key.id)
+        concert["band"]["self"] = req.base_url[:-8] + "bands/" + str(concert["band"]["id"])
+    concert_list["self"] = f"{req.base_url}?limit={q_limit}&offset={q_offset}"
+    if q_result.next_page_token:
+        concert_list["next"] = f"{req.base_url}?limit={q_limit}&offset={q_limit+q_offset}"
+    res = make_response(json.dumps(concert_list))
+    res.headers.set("Content-type", "application/json")
+    res.status_code = 200
+    return res
 
 
 def get_concert_with_id():
