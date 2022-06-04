@@ -245,7 +245,41 @@ def get_concert_with_id(concert_id, req):
 
 
 def edit_concert_with_id(concert_id, req):
-    pass
+    # Validate request headers
+    content_error = validate_content_header_json(req.headers)
+    if content_error is not None:
+        return content_error
+    accept_error = validate_accept_header_json(req.headers)
+    if accept_error is not None:
+        return accept_error
+    # Validate concert_id and request body
+    concert = ds_client.get(key=ds_client.key(constants.concert, int(concert_id)))
+    id_error = validate_concert_id(concert)
+    if id_error is not None:
+        return id_error
+    req_body = req.get_json()
+    key_err = validate_concert_attribute_keys(req_body)
+    if key_err is not None:
+        return key_err
+    if "date" in req_body:
+        date_err = validate_date_format(req_body["date"])
+        if date_err is not None:
+            return date_err
+    if "band" in req_body:
+        band = ds_client.get(key=ds_client.key(constants.band, int(req_body["band"])))
+        band_err = validate_band_id(band)
+        if band_err is not None:
+            return band_err
+    # Update concert entity and send response with result
+    update_concert_details(concert, req_body)
+    ds_client.put(concert)
+    concert["id"] = concert.key.id
+    concert["self"] = req.base_url + "/" + str(concert.key.id)
+    concert["band"]["self"] = req.base_url[:-8] + "bands/" + str(concert["band"]["id"])
+    res = make_response(json.dumps(concert))
+    res.headers.set("Content-type", "application/json")
+    res.status_code = 200
+    return res
 
 
 def delete_concert_with_id(concert_id, req):
