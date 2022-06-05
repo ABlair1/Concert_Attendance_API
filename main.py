@@ -57,7 +57,7 @@ def get_user_info(jwt_token):
     user_info = {
         'f_name': decoded_jwt['given_name'],
         'l_name': decoded_jwt['family_name'],
-        'user_id': decoded_jwt['sub']
+        'auth_id': decoded_jwt['sub']
     }
     return user_info
 
@@ -66,7 +66,7 @@ def update_user(user, user_info):
         user.update({
         'f_name': user_info['f_name'], 
         'l_name': user_info['l_name'], 
-        'user_id': user_info['user_id'],
+        'auth_id': user_info['auth_id'],
         'concerts': []
     })
 
@@ -75,7 +75,7 @@ def store_user(user_info):
     query = ds_client.query(kind=constants.user)
     user_list = list(query.fetch())
     for user in user_list:
-        if user['user_id'] == user_info['user_id']:
+        if user['auth_id'] == user_info['auth_id']:
             return
     new_user = datastore.entity.Entity(key=ds_client.key(constants.user))
     update_user(new_user, user_info)
@@ -95,7 +95,7 @@ def home():
     return render_template('user_info.html',
         f_name=user_info['f_name'],
         l_name=user_info['l_name'],
-        user_id=user_info['user_id'],
+        auth_id=user_info['auth_id'],
         jwt_token=jwt_token
     )
 
