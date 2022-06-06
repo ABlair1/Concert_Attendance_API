@@ -63,9 +63,9 @@ def get_user_info(jwt_token):
 
 
 def update_user(user, user_info):
-        user.update({
-        'f_name': user_info['f_name'], 
-        'l_name': user_info['l_name'], 
+    user.update({
+        'f_name': user_info['f_name'],
+        'l_name': user_info['l_name'],
         'user_id': user_info['user_id'],
         'concerts': []
     })
@@ -92,7 +92,8 @@ def home():
     jwt_token = get_jwt_token(state)
     user_info = get_user_info(jwt_token)
     store_user(user_info)  # user entity created if not already in datastore
-    return render_template('user_info.html',
+    return render_template(
+        'user_info.html',
         f_name=user_info['f_name'],
         l_name=user_info['l_name'],
         user_id=user_info['user_id'],

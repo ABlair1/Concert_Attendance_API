@@ -79,7 +79,7 @@ def get_id_from_jwt(req):
     if 'Authorization' not in req.headers:
         return None
     auth_header = req.headers['Authorization'].split()
-    if len(auth_header) <2 or auth_header[0] != 'Bearer':
+    if len(auth_header) < 2 or auth_header[0] != 'Bearer':
         return None
     jwt_token = auth_header[1]
     try:

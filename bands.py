@@ -212,7 +212,7 @@ def delete_band_with_id(band_id, req):
     # if id_error is not None:
     #     return id_error
     # # Remove associated concerts from users and delete concerts
-    # concert_list = 
+    # concert_list =
     # # Delete band entity
     pass
 
