@@ -148,7 +148,7 @@ def add_concert_to_user(user_id, req):
         current_user_concerts.append(concert["id"])
     for concert_id in req_body["concerts"]:
         if concert_id not in current_user_concerts:
-            user["concerts"].append({"id": concert_id})
+            user["concerts"].append({"id": int(concert_id)})
     ds_client.put(user)
     user.pop("f_name", None)
     user.pop("l_name", None)

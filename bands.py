@@ -56,16 +56,22 @@ def validate_band_id(band):
 
 def validate_band_attribute_keys(req_body):
     allowed = ["name", "genre", "members"]
-    err = {"Error": "The request object includes additional attributes which are not permitted"}
-    if len(req_body) > len(allowed):
-        res = make_response(json.dumps(err))
+    attr_err = {"Error": "The request object includes additional attributes which are not permitted"}
+    concerts_err = {"Error": "Band concerts can only be edited at /concerts and /concerts/concert_id endpoints"}
+    req_attributes = list(req_body.keys())
+    if "concerts" in req_attributes:
+        res = make_response(json.dumps(concerts_err))
         res.headers.set("Content-type", "application/json")
         res.status_code = 400
         return res
-    req_attributes = list(req_body.keys())
+    if len(req_attributes) > len(allowed):
+        res = make_response(json.dumps(attr_err))
+        res.headers.set("Content-type", "application/json")
+        res.status_code = 400
+        return res
     for attribute in req_attributes:
         if attribute not in allowed:
-            res = make_response(json.dumps(err))
+            res = make_response(json.dumps(attr_err))
             res.headers.set("Content-type", "application/json")
             res.status_code = 400
             return res
@@ -103,6 +109,16 @@ def update_band_details(band, req_body):
     if "members" in req_body:
         updates["members"] = req_body["members"]
     band.update(updates)
+
+
+def remove_concert_from_all_users(concert_id):
+    query = ds_client.query(kind=constants.user)
+    user_list = list(query.fetch())
+    for user in user_list:
+        for concert_obj in user["concerts"]:
+            if concert_obj["id"] == int(concert_id):
+                user["concerts"].remove(concert_obj)
+                ds_client.put(user)
 
 
 def create_band(req):
@@ -206,15 +222,23 @@ def edit_band_with_id(band_id, req):
 
 
 def delete_band_with_id(band_id, req):
-    # # Validate band id
-    # band = ds_client.get(key=ds_client.key(constants.band, int(band_id)))
-    # id_error = validate_band_id(band)
-    # if id_error is not None:
-    #     return id_error
-    # # Remove associated concerts from users and delete concerts
-    # concert_list =
-    # # Delete band entity
-    pass
+    # Validate request headers and band_id
+    accept_error = validate_accept_header_json(req.headers)
+    if accept_error is not None:
+        return accept_error
+    band_key = ds_client.key(constants.band, int(band_id))
+    band = ds_client.get(key=band_key)
+    id_error = validate_band_id(band)
+    if id_error is not None:
+        return id_error
+    # Remove all band concerts from user concerts and delete concert entities
+    for concert_obj in band["concerts"]:
+        concert_key = ds_client.key(constants.concert, concert_obj["id"])
+        remove_concert_from_all_users(concert_obj["id"])
+        ds_client.delete(concert_key)
+    # Delete band entity
+    ds_client.delete(band_key)
+    return ('', 204)
 
 
 @bp.route('', methods=['POST', 'GET'])

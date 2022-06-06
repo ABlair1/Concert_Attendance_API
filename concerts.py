@@ -138,16 +138,26 @@ def validate_concert_attributes(req_body):
 
 def add_concert_to_band(concert_id, band_id):
     band = ds_client.get(key=ds_client.key(constants.band, int(band_id)))
-    band["concerts"].append({"id": concert_id})
+    band["concerts"].append({"id": int(concert_id)})
     ds_client.put(band)
 
 
 def remove_concert_from_band(concert_id, band_id):
     band = ds_client.get(key=ds_client.key(constants.band, int(band_id)))
     for concert in band["concerts"]:
-        if concert["id"] == concert_id:
+        if concert["id"] == int(concert_id):
             band["concerts"].remove(concert)
     ds_client.put(band)
+
+
+def remove_concert_from_all_users(concert_id):
+    query = ds_client.query(kind=constants.user)
+    user_list = list(query.fetch())
+    for user in user_list:
+        for concert_obj in user["concerts"]:
+            if concert_obj["id"] == int(concert_id):
+                user["concerts"].remove(concert_obj)
+                ds_client.put(user)
 
 
 def update_new_concert(concert, req_body):
@@ -283,7 +293,21 @@ def edit_concert_with_id(concert_id, req):
 
 
 def delete_concert_with_id(concert_id, req):
-    pass
+    # Validate request headers and concert_id
+    accept_error = validate_accept_header_json(req.headers)
+    if accept_error is not None:
+        return accept_error
+    concert_key = ds_client.key(constants.concert, int(concert_id))
+    concert = ds_client.get(key=concert_key)
+    id_error = validate_concert_id(concert)
+    if id_error is not None:
+        return id_error
+    # Remove concert_id from all user concerts and band concerts
+    remove_concert_from_all_users(concert_id)
+    remove_concert_from_band(concert.key.id, concert["band"]["id"])
+    # Delete concert entity
+    ds_client.delete(concert_key)
+    return ('', 204)
 
 
 @bp.route('', methods=['POST', 'GET'])
