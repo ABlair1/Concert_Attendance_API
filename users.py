@@ -91,7 +91,7 @@ def get_id_from_jwt(req):
 
 
 def validate_user_permission(user_id, req):
-    token_err = {"Error": "This resource is protected and the user is not authorized"}
+    token_err = {"Error": "This resource is protected and access is not authorized"}
     token_user_id = get_id_from_jwt(req)
     if token_user_id != user_id:
         res = make_response(json.dumps(token_err))
@@ -115,7 +115,7 @@ def validate_user_req_body(req_body):
 
 
 def add_concert_to_user(user_id, req):
-    # Validate request headers, request body, and user_id from path
+    # Validate request headers, request body, and user_id
     accept_err = validate_accept_header_json(req.headers)
     if accept_err is not None:
         return accept_err
@@ -162,25 +162,62 @@ def add_concert_to_user(user_id, req):
 
 
 def get_user_concerts(user_id, req):
-    # Validate request headers
+    # Validate request headers and user_id
     accept_err = validate_accept_header_json(req.headers)
     if accept_err is not None:
         return accept_err
+    query = ds_client.query(kind=constants.user)
+    user_list = list(query.fetch())
+    user = None
+    for user_entity in user_list:
+        if user_entity["user_id"] == user_id:
+            user = user_entity
+            break
+    user_id_err = validate_user_id(user)
+    if user_id_err is not None:
+        return user_id_err
     auth_err = validate_user_permission(user_id, req)
     if auth_err is not None:
         return auth_err
     # Retrieve and return list of user concerts
+    user.pop("f_name", None)
+    user.pop("l_name", None)
+    user.pop("user_id", None)
+    for concert in user["concerts"]:
+        concert["self"] = req.base_url[:-36] + "concerts/" + str(concert["id"])
+    res = make_response(json.dumps(user))
+    res.headers.set("Content-type", "application/json")
+    res.status_code = 200
+    return res
 
 
 def remove_concert_from_user(user_id, concert_id, req):
-    # Validate request headers
+    # Validate request headers, user_id and concert_id
     accept_err = validate_accept_header_json(req.headers)
     if accept_err is not None:
         return accept_err
+    query = ds_client.query(kind=constants.user)
+    user_list = list(query.fetch())
+    user = None
+    for user_entity in user_list:
+        if user_entity["user_id"] == user_id:
+            user = user_entity
+            break
+    user_id_err = validate_user_id(user)
+    if user_id_err is not None:
+        return user_id_err
     auth_err = validate_user_permission(user_id, req)
     if auth_err is not None:
         return auth_err
-    # Remove concert_id from list of user concerts
+    concert_id_err = validate_concert_ids([concert_id])
+    if concert_id_err is not None:
+        return concert_id_err
+    # Remove concert_id from list of user concerts if present
+    for concert in user["concerts"]:
+        if concert["id"] == int(concert_id):
+            user["concerts"].remove(concert)
+            ds_client.put(user)
+    return ('', 204)
 
 
 def get_all_users(req):
