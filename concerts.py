@@ -249,7 +249,7 @@ def get_concert_with_id(concert_id, req):
         return id_error
     concert["id"] = concert.key.id
     concert["self"] = req.base_url
-    concert["band"]["self"] = req.base_url[:-8] + "bands/" + str(concert["band"]["id"])
+    concert["band"]["self"] = req.base_url[:-25] + "bands/" + str(concert["band"]["id"])
     res = make_response(json.dumps(concert))
     res.headers.set("Content-type", "application/json")
     res.status_code = 200
@@ -286,8 +286,8 @@ def edit_concert_with_id(concert_id, req):
     update_concert_details(concert, req_body)
     ds_client.put(concert)
     concert["id"] = concert.key.id
-    concert["self"] = req.base_url + "/" + str(concert.key.id)
-    concert["band"]["self"] = req.base_url[:-8] + "bands/" + str(concert["band"]["id"])
+    concert["self"] = req.base_url
+    concert["band"]["self"] = req.base_url[:-25] + "bands/" + str(concert["band"]["id"])
     res = make_response(json.dumps(concert))
     res.headers.set("Content-type", "application/json")
     res.status_code = 200
