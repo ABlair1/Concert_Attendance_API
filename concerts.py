@@ -229,6 +229,8 @@ def get_all_concerts(req):
     concert_list["self"] = f"{req.base_url}?limit={q_limit}&offset={q_offset}"
     if q_result.next_page_token:
         concert_list["next"] = f"{req.base_url}?limit={q_limit}&offset={q_limit+q_offset}"
+    collection_len = len(list(ds_client.query(kind=constants.concert).fetch()))
+    concert_list["collection_length"] = collection_len
     res = make_response(json.dumps(concert_list))
     res.headers.set("Content-type", "application/json")
     res.status_code = 200

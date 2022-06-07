@@ -165,6 +165,8 @@ def get_all_bands(req):
     band_list["self"] = f"{req.base_url}?limit={q_limit}&offset={q_offset}"
     if q_result.next_page_token:
         band_list["next"] = f"{req.base_url}?limit={q_limit}&offset={q_limit+q_offset}"
+    collection_len = len(list(ds_client.query(kind=constants.band).fetch()))
+    band_list["collection_length"] = collection_len
     res = make_response(json.dumps(band_list))
     res.headers.set("Content-type", "application/json")
     res.status_code = 200
